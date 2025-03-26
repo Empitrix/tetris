@@ -1,0 +1,4 @@
+CompileFlags:
+  Compiler: gcc
+  Add:
+    - "-lraylib"
