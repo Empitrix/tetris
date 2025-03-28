@@ -2,7 +2,15 @@
 /debug
 
 output
+output.exe
+
+*.out
+*.exe
 
 dump.c
 dump2.c
 backup.c
+save.c
+save2.c
+f.c
+
