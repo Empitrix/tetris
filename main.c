@@ -20,11 +20,15 @@
 
 
 static int fps_cntr = 0;
-static int callback_duration = 10;  // each 10 MS
+// static int callback_duration = 10;  // each 10 MS
+static int callback_duration = 50;  // each 10 MS
 static block_t table[ROWS][COLS] = { 0 };
 static block_t tmp[ROWS][COLS] = { 0 };
 static int shape_idx = 0;
 static int next_shape_idx = 0;
+
+static int nlines = 0;
+static int rr = 0;
 
 
 
@@ -297,7 +301,7 @@ second_loop_out:
 	// 	dist = distA;
 	// }
 	// dist = distB;
-	printf("%d\n", dist);
+	// printf("%d\n", dist);
 
 	for(int x = 0; x < COLS; x++){
 		for(int y = 0; y < ROWS; y++){
@@ -340,18 +344,93 @@ void import_shape(){
 			table[0][bp + i].color = clr;
 		}
 	}
-
-
 }
 
 
 
+int check_fill_row(int y_set){
+	for(int x = 0; x < COLS; x++){
+		if(table[y_set][x].set == 0){
+			return 0;
+		}
+	}
+	return 1;
+}
+
+void check_rows(void) {
+	for (int y = ROWS - 1; y >= 0; y--) {
+		int full = 1;
+		int empty = 1;
+		
+		// Check if row is full or empty
+		for (int x = 0; x < COLS; x++) {
+			if (!table[y][x].set) {
+				full = 0;
+			} else {
+				empty = 0;
+			}
+		}
+		
+		// If row is full, remove it and shift everything down
+		if (full) {
+			for (int new_y = y; new_y > 0; new_y--) {
+				for (int x = 0; x < COLS; x++) {
+					table[new_y][x] = table[new_y - 1][x];
+				}
+			}
+			// Clear the top row
+			for (int x = 0; x < COLS; x++) {
+				table[0][x] = (block_t){0};
+			}
+			y++; // Re-check the same row after shifting
+			nlines++;
+		}
+		
+		// If row is empty, break early (no more blocks above)
+		if (empty) {
+			break;
+		}
+	}
+}
+
+int check_rows2(void){
+	int removed = 0;
+	int move_down = 0;
+	for(int y = 0; y < ROWS; y++){
+		if(check_fill_row(y)){
+			for(int i = 0; i < COLS; i++){
+				table[y][i] = (block_t){ 0 };
+				move_down = 1;
+				removed = y;
+				goto after_part;
+			}
+		}
+	}
+
+after_part:
+
+	if(move_down){
+		printf("%d\n", removed);
+		for(int x = 0; x < COLS; x++){
+			for(int y = removed; y >= 0; y--){
+				table[y + 1][x] = table[y][x];
+			}
+		}
+	}
+
+
+	// for(int x = removed; x < COLS; x++){
+	// }
+
+	return move_down;
+}
+
 
 int callback(){
-	printf("Callback !\n");
 	int hit = move_down();
 
 	if(hit){
+		check_rows();
 		import_shape();
 	}
 
@@ -419,8 +498,71 @@ void draw_next_shape() {
 }
 
 
-
 void rotate(void) {
+	int min_x = COLS, min_y = ROWS, max_x = 0, max_y = 0;
+	
+	// Find the bounding box of the moving blocks
+	for (int x = 0; x < COLS; x++) {
+		for (int y = 0; y < ROWS; y++) {
+			if (table[y][x].movement) {
+				if (x < min_x) min_x = x;
+				if (y < min_y) min_y = y;
+				if (x > max_x) max_x = x;
+				if (y > max_y) max_y = y;
+			}
+		}
+	}
+	
+	// int center_x = (min_x + max_x + 1) / 2;
+	// int center_y = (min_y + max_y + 1) / 2;
+
+	int center_x = (min_x + max_x + 1) / 2;
+	int center_y = (min_y + max_y + 1) / 2;
+	
+	block_t temp[ROWS][COLS];
+	memset(temp, 0, sizeof(temp));
+	
+	// Rotate each moving block around the center
+	for (int x = min_x; x <= max_x; x++) {
+		for (int y = min_y; y <= max_y; y++) {
+			if (table[y][x].movement) {
+				int rel_x = x - center_x;
+				int rel_y = y - center_y;
+				int new_x = center_x - rel_y;
+				int new_y = center_y + rel_x;
+				
+				// Check if within bounds
+				if (new_x >= 0 && new_x < COLS && new_y >= 0 && new_y < ROWS) {
+					temp[new_y][new_x] = table[y][x];
+				} else {
+					return; // Cancel rotation if out of bounds
+				}
+			}
+		}
+	}
+	
+	// Clear original positions
+	for (int x = min_x; x <= max_x; x++) {
+		for (int y = min_y; y <= max_y; y++) {
+			if (table[y][x].movement) {
+				table[y][x] = (block_t){0};
+			}
+		}
+	}
+	
+	// Apply rotated positions
+	for (int x = 0; x < COLS; x++) {
+		for (int y = 0; y < ROWS; y++) {
+			if (temp[y][x].movement) {
+				table[y][x] = temp[y][x];
+			}
+		}
+	}
+
+	rr++;
+}
+
+void rotate2(void) {
 	int min_x = COLS, min_y = ROWS, max_x = 0, max_y = 0;
 	
 	// Find the bounding box of the moving blocks
@@ -480,22 +622,10 @@ int main(void){
 		}
 	}
 
-	shape_idx = randint(0, MAX_SHAPES - 1);
+	// shape_idx = randint(0, MAX_SHAPES - 1);
+	next_shape_idx = randint(0, MAX_SHAPES - 1);
 	import_shape();
 
-	// table[2][2].movement = 1;
-	// table[2][2].color = WHITE;
-
-	// table[1][1].movement = 1;
-	// table[1][1].color = WHITE;
-
-	// table[2][1].movement = 1;
-	// table[2][1].color = WHITE;
-
-	// table[2][0].movement = 1;
-	// table[2][0].color = WHITE;
-
-	// next_shape_idx = randint(0, MAX_SHAPES - 1);
 
 	while (!WindowShouldClose()){
 
@@ -509,9 +639,9 @@ int main(void){
 		}
 
 
-
-
 		drawText(V2(280, 50), 30, WHITE, "%d, [%d]", fps_cntr, next_shape_idx);
+		drawText(V2(280, 250), 30, WHITE, "Lines");
+		drawText(V2(280, 300), 30, WHITE, "%d", nlines);
 
 
 		reflect_down();
@@ -528,12 +658,17 @@ int main(void){
 		if(IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT)){  move_left();  }
 
 		if(IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP)){
-			rotater();
+			rotate();
+			if(rr == 2){
+				move_left();
+				rr = 0;
+			}
 			fps_cntr = 0;
+		}
 
-			// rotate_submatrix_clockwise(px, py, 3);
-			// rotate_tetromino();
-			// rotate_matrix(2, 2, 5);
+		if(IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN)){
+			callback();
+			fps_cntr = 0;
 		}
 
 		if(IsKeyPressed(KEY_SPACE)){
