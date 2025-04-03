@@ -4,6 +4,11 @@
 #include <string.h>
 #include "src/utils.h"
 #include "src/types.h"
+#include <stdlib.h>
+#include <math.h>
+#include <unistd.h>
+#include <pthread.h>
+
 
 
 
@@ -29,6 +34,134 @@ static int next_shape_idx = 0;
 
 static int nlines = 0;
 static int rr = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#define SAMPLE_RATE 44100
+#define AMPLITUDE 32000
+#define SDUR 0.5f
+
+typedef struct {
+	float frequency;
+	float duration; // in seconds
+} Note;
+
+// Tetris Theme (Korobeiniki) melody
+Note tetrisMelody[] = {
+	{ 659.25, SDUR }, { 493.88, SDUR }, { 523.25, SDUR }, { 587.33, SDUR },   // G5, D5, C5, D5
+	{ 523.25, SDUR }, { 493.88, SDUR }, { 440.00, SDUR }, { 440.00, SDUR },   // C5, D5, A4, A4
+	{ 523.25, SDUR }, { 659.25, SDUR }, { 587.33, SDUR }, { 523.25, SDUR },   // C5, G5, D5, C5
+	{ 493.88, SDUR }, { 523.25, SDUR }, { 587.33, SDUR }, { 659.25, SDUR },   // D5, C5, D5, G5
+	{ 523.25, SDUR }, { 440.00, SDUR }, { 440.00, SDUR }, {   0.00, SDUR },   // C5, A4, A4, Pause
+	{ 587.33, SDUR }, { 698.46, SDUR }, { 880.00, SDUR }, { 783.99, SDUR },   // D5, F5, A5, G5
+	{ 698.46, SDUR }, { 659.25, SDUR }, { 523.25, SDUR }, { 659.25, SDUR },   // F5, G5, C5, G5
+	{ 587.33, SDUR }, { 523.25, SDUR }, { 493.88, SDUR }, { 523.25, SDUR },   // D5, C5, D5, C5
+	{ 587.33, SDUR }, { 659.25, SDUR }, { 523.25, SDUR }, { 440.00, SDUR }	// D5, G5, C5, A4
+};
+
+#define MELODY_LENGTH (sizeof(tetrisMelody) / sizeof(Note))
+
+// Generate a sine wave for a given note
+Wave GenerateNoteWave(float frequency, float duration) {
+	int sampleCount = (int)(SAMPLE_RATE * duration);
+	short *samples = (short *)malloc(sampleCount * sizeof(short));
+
+	for (int i = 0; i < sampleCount; i++) {
+		float t = (float)i / SAMPLE_RATE;
+		samples[i] = (short)(AMPLITUDE * sinf(2.0f * PI * frequency * t));
+	}
+
+	Wave wave = { .frameCount = sampleCount, .sampleRate = SAMPLE_RATE, .sampleSize = 16, .channels = 1, .data = samples };
+	return wave;
+}
+
+void *PlayMelodyThread(void *arg) {
+	Note *melody = (Note *)arg;
+	while (1) {  // Infinite loop to keep repeating the melody
+		for (int i = 0; i < MELODY_LENGTH; i++) {
+			if (melody[i].frequency > 0.0) {
+				Wave wave = GenerateNoteWave(melody[i].frequency, melody[i].duration);
+				Sound sound = LoadSoundFromWave(wave);
+				PlaySound(sound);
+				usleep((int)(melody[i].duration * 500000)); // Delay for note duration
+				UnloadSound(sound);
+				free(wave.data);
+			} else {
+				usleep((int)(melody[i].duration * 1000000)); // Pause for silence
+			}
+		}
+	}
+	return NULL;
+}
+
+
+
+
+// Play the sound when a block is falling
+void block_down_audio(void) {
+	// Example melody for block down: quick and short notes
+	Note blockDown[] = {
+		{ 220.00, 0.2f }, { 220.00, 0.2f }, { 220.00, 0.2f }  // C4 (quick), repetitive
+	};
+	int length = sizeof(blockDown) / sizeof(Note);
+
+	for (int i = 0; i < length; i++) {
+		if (blockDown[i].frequency > 0.0) {
+			Wave wave = GenerateNoteWave(blockDown[i].frequency, blockDown[i].duration);
+			Sound sound = LoadSoundFromWave(wave);
+			PlaySound(sound);
+			// usleep((int)(blockDown[i].duration * 500000)); // Delay for note duration
+			UnloadSound(sound);
+			free(wave.data);
+		} else {
+			// usleep((int)(blockDown[i].duration * 1000000)); // Pause for silence
+		}
+	}
+}
+
+// Play the sound when a row is full
+void row_full_audio(void) {
+	// Example melody for row full: slightly longer note sequence
+	Note rowFull[] = {
+		{ 440.00, 0.4f }, { 523.25, 0.4f }, { 440.00, 0.4f }  // A4, C5, A4
+	};
+	int length = sizeof(rowFull) / sizeof(Note);
+
+	for (int i = 0; i < length; i++) {
+		if (rowFull[i].frequency > 0.0) {
+			Wave wave = GenerateNoteWave(rowFull[i].frequency, rowFull[i].duration);
+			Sound sound = LoadSoundFromWave(wave);
+			PlaySound(sound);
+			usleep((int)(rowFull[i].duration * 500000)); // Delay for note duration
+			UnloadSound(sound);
+			free(wave.data);
+		} else {
+			usleep((int)(rowFull[i].duration * 1000000)); // Pause for silence
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -384,6 +517,8 @@ void check_rows(void) {
 			}
 			y++; // Re-check the same row after shifting
 			nlines++;
+
+			// row_full_audio();
 		}
 		
 		// If row is empty, break early (no more blocks above)
@@ -427,6 +562,7 @@ after_part:
 
 
 int callback(){
+	block_down_audio();
 	int hit = move_down();
 
 	if(hit){
@@ -614,6 +750,15 @@ int main(void){
 	InitWindow(WIDTH, HEIGHT, "Tetris");
 	SetTargetFPS(FPS);
 
+	InitAudioDevice();
+
+	pthread_t melodyThread;
+
+	// Start melody playback in a separate thread as soon as the window is opened
+	pthread_create(&melodyThread, NULL, PlayMelodyThread, (void *)tetrisMelody);
+	pthread_detach(melodyThread); // Detach the thread so it can run independently
+
+
 
 	for(int x = 0; x < COLS; x++){
 		for(int y = 0; y < ROWS; y++){
@@ -692,6 +837,7 @@ int main(void){
 
 
 	CloseWindow();
+	CloseAudioDevice();
 	return 0;
 }
 
