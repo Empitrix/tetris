@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <unistd.h>
-#include <pthread.h>
+// #include <pthread.h>
 
 
 
@@ -34,6 +34,8 @@ static int next_shape_idx = 0;
 
 static int nlines = 0;
 static int rr = 0;
+
+static int running = 1;
 
 
 
@@ -186,7 +188,15 @@ void calc_center(int *px, int *py){
 
 
 void drawRect(Vector2 pos, Color clr, Color outline){
+
 	DrawRectangle(pos.x * BS, pos.y * BS, BS, BS, clr);
+
+	int half = BS / 2;
+	clr.r = clr.r >= 100 ? clr.r - 100 : clr.r;
+	clr.g = clr.g >= 100 ? clr.g - 100 : clr.g;
+	clr.b = clr.b >= 100 ? clr.b - 100 : clr.b;
+	DrawRectangle((pos.x * BS) + (int)(half / 2), (pos.y * BS) + (int)(half / 2), half, half, clr);
+
 	DrawRectangleLines((pos.x * BS) + 1, (pos.y * BS) + 1, BS - 1, BS - 1, outline);
 }
 
@@ -198,7 +208,8 @@ void draw_table(){
 				drawRect(V2(x, y), table[y][x].color, BLACK);
 			} else {
 				if(table[y][x].reflect){
-					drawRect(V2(x, y), BACKGROUND, WHITE);
+					// drawRect(V2(x, y), BACKGROUND, WHITE);
+					drawRect(V2(x, y), (Color){50, 50, 50, 100}, WHITE);
 				} else {
 					drawRect(V2(x, y), BACKGROUND, BLACK);
 				}
@@ -490,6 +501,40 @@ int check_fill_row(int y_set){
 	return 1;
 }
 
+
+void clear_stack(){
+	for(int x = 0; x < COLS; x++){
+		for(int y = 0; y < ROWS; y++){
+			table[y][x] = (block_t){ 0 };
+			table[y][x].set = 0;
+			table[y][x].movement = 0;
+			table[y][x].color = BACKGROUND;
+			table[y][x].reflect = 0;
+		}
+	}
+
+	next_shape_idx = randint(0, MAX_SHAPES - 1);
+	import_shape();
+	nlines = 0;
+	rr = 0;
+}
+
+int any_col_full(void){
+	for(int x = 0; x < COLS; x++){
+		int full = 1;
+		for(int y = 0; y < ROWS; y++){
+			if((table[y][x].set || table[y][x].movement) == 0){
+				full = 0;
+				break;
+			}
+		}
+		if(full){
+			return 1;
+		}
+	}
+	return 0;
+}
+
 void check_rows(void) {
 	for (int y = ROWS - 1; y >= 0; y--) {
 		int full = 1;
@@ -561,13 +606,39 @@ after_part:
 }
 
 
+
+void game_over_func(){
+	// int game_over = any_col_full();
+	// if(game_over){
+	// printf("Game Over!\n");
+	// clear_stack();
+	// ClearBackground(BLACK);
+	// drawText(V2((int)(WIDTH / 2) - (strlen("Game Over") * (int)(GetFontDefault().baseSize)), (int)(HEIGHT / 2) - (int)(GetFontDefault().baseSize / 2)), 12, WHITE, "GAME OVER!");
+		// exit(0);
+	running = 0;
+	// int reload = 0;
+	// while(reload == 0){
+	// 	if(IsKeyPressed(KEY_R)){
+	// 		reload = 1;
+	// 	}
+	// 	// usleep(100);
+	// 	WaitTime(1);
+	// }
+}
+
 int callback(){
-	block_down_audio();
+	// block_down_audio();
+	int game_over = any_col_full();
+	if(game_over){
+		game_over_func();
+	}
+
 	int hit = move_down();
 
 	if(hit){
 		check_rows();
 		import_shape();
+		check_rows();
 	}
 
 	return hit;
@@ -750,6 +821,7 @@ int main(void){
 	InitWindow(WIDTH, HEIGHT, "Tetris");
 	SetTargetFPS(FPS);
 
+	/*
 	InitAudioDevice();
 
 	pthread_t melodyThread;
@@ -757,6 +829,7 @@ int main(void){
 	// Start melody playback in a separate thread as soon as the window is opened
 	pthread_create(&melodyThread, NULL, PlayMelodyThread, (void *)tetrisMelody);
 	pthread_detach(melodyThread); // Detach the thread so it can run independently
+	*/
 
 
 
@@ -774,6 +847,30 @@ int main(void){
 
 	while (!WindowShouldClose()){
 
+
+		if(running == 0 && !WindowShouldClose()){
+
+			BeginDrawing();
+			ClearBackground(BLACK);
+
+			drawText(V2((int)(WIDTH / 2) - (int)((strlen("Game Over, Play again? (Y/N)") * (int)(GetFontDefault().baseSize)) / 2), (int)(HEIGHT / 2) - (int)(GetFontDefault().baseSize / 2)), 20, WHITE, "Game Over, Play again? (Y/N)");
+
+			// game_over_func();
+
+			if(IsKeyPressed(KEY_R)){
+				next_shape_idx = randint(0, MAX_SHAPES - 1);
+				clear_stack();
+				running = 1;
+			}
+
+			if(IsKeyPressed(KEY_Q)){
+				goto out_of_frame;
+			}
+
+			EndDrawing();
+
+			continue;
+		}
 
 		BeginDrawing();
 		ClearBackground(BLACK);
@@ -795,6 +892,7 @@ int main(void){
 
 		EndDrawing();
 
+		// if(running)
 
 
 		// Exit
@@ -818,26 +916,35 @@ int main(void){
 
 		if(IsKeyPressed(KEY_SPACE)){
 			int hit_status = 0;
+			int cntr = 0;
 			while(hit_status == 0){
+				if(cntr++ >= (COLS + (N * N))){
+					game_over_func();
+					hit_status = 0;
+					break;
+				}
 				hit_status = callback();
 			}
 		}
 
 
 
-	for(int x = 0; x < COLS; x++){
-		for(int y = 0; y < ROWS; y++){
-			table[y][x].reflect = 0;
+		for(int x = 0; x < COLS; x++){
+			for(int y = 0; y < ROWS; y++){
+				table[y][x].reflect = 0;
+			}
 		}
-	}
+
 
 
 		fps_cntr++;
 	}
 
-
+out_of_frame:
 	CloseWindow();
+	/*
 	CloseAudioDevice();
+	*/
 	return 0;
 }
 
