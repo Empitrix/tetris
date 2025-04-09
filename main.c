@@ -10,6 +10,9 @@
 #include <pthread.h>
 
 
+// DEKSTOP_PLATFORM, WEB_PLATFORM, ANDROID_PLATFORM
+// #define DEKSTOP_PLATFORM
+// #define WEB_PLATFORM
 
 
 #define WIDTH 400
@@ -898,12 +901,50 @@ int main(void){
 		// if(running)
 
 
-		// Exit
-		if(IsKeyPressed(KEY_Q)){ break; }
-		if(IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)){ move_right(); }
-		if(IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT)){  move_left();  }
+		// PollInputEvents();
 
-		if(IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP)){
+		// Exit
+
+
+		int Q_PRESSED = 0;
+		int RIGHT_PRESSED = 0;
+		int LEFT_PRESSED = 0;
+		int UP_PRESSED = 0;
+		int DOWN_PRESSED = 0;
+		int SPACE_PRESSED = 0;
+
+
+
+#ifdef DEKSTOP_PLATFORM
+		Q_PRESSED = IsKeyPressed(KEY_Q);
+		RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
+		LEFT_PRESSED = IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT);
+		UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
+		DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
+		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
+#endif
+#ifdef ANDROID_PLATFORM
+		// Q_PRESSED = IsKeyPressed(KEY_Q);
+		RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
+		LEFT_PRESSED = IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT);
+		UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
+		DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
+		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
+#endif
+#ifdef WEB_PLATFORM
+		// Q_PRESSED = IsKeyDown(KEY_Q);
+		RIGHT_PRESSED = IsKeyDown(KEY_RIGHT);
+		LEFT_PRESSED = IsKeyDown(KEY_LEFT);
+		UP_PRESSED = IsKeyDown(KEY_UP);
+		DOWN_PRESSED = IsKeyDown(KEY_DOWN);
+		SPACE_PRESSED = IsKeyDown(KEY_SPACE);
+#endif
+
+		if(Q_PRESSED){ break; }
+		if(RIGHT_PRESSED){ move_right(); }
+		if(LEFT_PRESSED){  move_left();  }
+
+		if(UP_PRESSED){
 			rotate();
 			if(rr == 2){
 				move_left();
@@ -912,12 +953,12 @@ int main(void){
 			fps_cntr = 0;
 		}
 
-		if(IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN)){
+		if(DOWN_PRESSED){
 			callback();
 			fps_cntr = 0;
 		}
 
-		if(IsKeyPressed(KEY_SPACE)){
+		if(SPACE_PRESSED){
 			int hit_status = 0;
 			int cntr = 0;
 			while(hit_status == 0){

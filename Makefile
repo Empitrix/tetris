@@ -8,11 +8,11 @@ endif
 
 # compile for linux
 linux:
-	@ cc ./main.c -lm -lraylib -o $(OUTPUT)
+	@ cc ./main.c -lm -lraylib -DDEKSTOP_PLATFORM -o $(OUTPUT)
 
 # compile for windows
 windows:
-	@ gcc main.c -o $(OUTPUT).exe -O1 -Wall -std=c99 -Wno-missing-braces -I support/win32/include/ -L support/win32/lib/ -lraylib -lopengl32 -lm -lgdi32 -lwinmm
+	@ gcc main.c -o $(OUTPUT).exe -DDEKSTOP_PLATFORM -O1 -Wall -std=c99 -Wno-missing-braces -I support/win32/include/ -L support/win32/lib/ -lraylib -lopengl32 -lm -lgdi32 -lwinmm
 
 # Run by the specified platform
 run:
@@ -31,8 +31,8 @@ total:
 
 # Create for web using emscripten
 wasm:
-	@ emcc -o $(OUTPUT).html main.c \
-	support/web/lib/libraylib.a -DPLATFORM_WEB \
+	@ emcc -o index.html main.c \
+	support/web/lib/libraylib.a -DPLATFORM_WEB -DSUPPORT_CUSTOM_FRAME_CONTROL -DWEB_PLATFORM \
 	-I support/web/include \
 	-s 'EXPORTED_FUNCTIONS=["_free","_malloc","_main"]' \
 	-s EXPORTED_RUNTIME_METHODS=ccall \
