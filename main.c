@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <unistd.h>
-// #include <pthread.h>
+#include <pthread.h>
 
 
 
@@ -816,21 +816,22 @@ void rotate2(void) {
 }
 
 
+void play_again(void){
+	next_shape_idx = randint(0, MAX_SHAPES - 1);
+	clear_stack();
+	running = 1;
+}
+
 int main(void){
 	SetTraceLogLevel(LOG_NONE);
 	InitWindow(WIDTH, HEIGHT, "Tetris");
 	SetTargetFPS(FPS);
 
-	/*
+	// Initialize background audio
 	InitAudioDevice();
-
 	pthread_t melodyThread;
-
-	// Start melody playback in a separate thread as soon as the window is opened
 	pthread_create(&melodyThread, NULL, PlayMelodyThread, (void *)tetrisMelody);
-	pthread_detach(melodyThread); // Detach the thread so it can run independently
-	*/
-
+	pthread_detach(melodyThread);
 
 
 	for(int x = 0; x < COLS; x++){
@@ -840,7 +841,6 @@ int main(void){
 		}
 	}
 
-	// shape_idx = randint(0, MAX_SHAPES - 1);
 	next_shape_idx = randint(0, MAX_SHAPES - 1);
 	import_shape();
 
@@ -853,17 +853,20 @@ int main(void){
 			BeginDrawing();
 			ClearBackground(BLACK);
 
-			drawText(V2((int)(WIDTH / 2) - (int)((strlen("Game Over, Play again? (Y/N)") * (int)(GetFontDefault().baseSize)) / 2), (int)(HEIGHT / 2) - (int)(GetFontDefault().baseSize / 2)), 20, WHITE, "Game Over, Play again? (Y/N)");
+			char buffer[128] = { 0 };
+			sprintf(buffer, "Game Over, Play again? (Y/N)");
+			char score[128] = { 0 };
+			sprintf(score, "%d", nlines);
+			int len = strlen(buffer);
+			DrawText(score, 10, 10, 50, WHITE);
+			drawText(V2((int)(WIDTH / 2) - (int)((len * (int)(GetFontDefault().baseSize)) / 2), (int)(HEIGHT / 2) - (int)(GetFontDefault().baseSize / 2)), 20, WHITE, buffer);
+			drawButton("Play Again?", V2(125, 350), V2(140, 50), 20, play_again);
 
-			// game_over_func();
-
-			if(IsKeyPressed(KEY_R)){
-				next_shape_idx = randint(0, MAX_SHAPES - 1);
-				clear_stack();
-				running = 1;
+			if(IsKeyPressed(KEY_R) || IsKeyPressed(KEY_Y)){
+				play_again();
 			}
 
-			if(IsKeyPressed(KEY_Q)){
+			if(IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_N)){
 				goto out_of_frame;
 			}
 
@@ -942,9 +945,7 @@ int main(void){
 
 out_of_frame:
 	CloseWindow();
-	/*
 	CloseAudioDevice();
-	*/
 	return 0;
 }
 

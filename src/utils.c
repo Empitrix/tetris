@@ -1,4 +1,5 @@
 // #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <raylib.h>
 #include <stdarg.h>
@@ -50,6 +51,46 @@ void drawText(Vector2 pos, int font_size, Color color, char *fmt, ...){
 	vsprintf(vout_buffer, fmt, arg_ptr);
 	DrawText(vout_buffer, pos.x, pos.y, font_size, color);
 	va_end(arg_ptr);
+}
+
+
+
+
+typedef void (*buttonCallback_t)(void);
+
+void drawButton(const char *title, Vector2 position, Vector2 size, int font_size, buttonCallback_t callback){
+	Rectangle rbtn = { position.x, position.y, size.x, size.y };
+
+
+	int btnState = 0;
+	bool btnAction = false;
+	Vector2 mousePoint = GetMousePosition();
+
+	// int font_size = (float)GetFontDefault().baseSize;
+
+
+	if (CheckCollisionPointRec(mousePoint, rbtn)){
+		DrawRectangleRounded(rbtn, 0.4, 10, DARKBLUE);
+	} else {
+		DrawRectangleRounded(rbtn, 0.4, 10, BLUE);
+	}
+
+	float textSize = strlen(title) * font_size;
+
+	// Make the text in the center of the button
+	Vector2 textPos = {
+		.x = position.x + ((size.x / 2) - textSize / 4),
+		.y = position.y + ((size.y / 2) - (int)(font_size / 2))
+	};
+
+	DrawTextEx(GetFontDefault(), title,
+		textPos,
+		font_size, 1, WHITE);
+
+	if (CheckCollisionPointRec(mousePoint, rbtn)){
+		btnState = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? 2 : 1;
+		if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && callback != NULL){ callback(); }
+	}
 }
 
 
