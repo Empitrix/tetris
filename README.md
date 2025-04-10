@@ -1,5 +1,5 @@
 # Tetris
-
+[Try it](https://empitrix.github.io/tetris/)
 
 # Build
 
