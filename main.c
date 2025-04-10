@@ -5,15 +5,32 @@
 #include "src/utils.h"
 #include "src/types.h"
 #include <stdlib.h>
-#include <math.h>
 #include <unistd.h>
 #include <pthread.h>
 
 
-// DEKSTOP_PLATFORM, WEB_PLATFORM, ANDROID_PLATFORM
-// #define DEKSTOP_PLATFORM
-// #define WEB_PLATFORM
 
+
+
+// No valid platform defined!, Using default!
+#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID) && !defined(PLATFORM_DESKTOP)
+#ifndef DEKSTOP_PLATFORM
+#define DEKSTOP_PLATFORM
+#endif
+#endif
+
+
+// Stop page scrolling
+#if defined (PLATFORM_WEB) || defined (WEB_PLATFORM)
+#include <emscripten.h>
+EM_JS(void, disable_scroll_keys, (), {
+	document.addEventListener('keydown', function (e) {
+		if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+			e.preventDefault();
+		}
+	}, false);
+});
+#endif
 
 #define WIDTH 400
 #define HEIGHT 500
@@ -26,170 +43,30 @@
 #define N 4
 
 
-
 static int fps_cntr = 0;
-// static int callback_duration = 10;  // each 10 MS
 static int callback_duration = 50;  // each 10 MS
 static block_t table[ROWS][COLS] = { 0 };
 static block_t tmp[ROWS][COLS] = { 0 };
 static int shape_idx = 0;
 static int next_shape_idx = 0;
-
 static int nlines = 0;
 static int rr = 0;
-
 static int running = 1;
 
 
+void drawRect(Vector2 pos, Color clr, Color outline) {
+	DrawRectangleRounded((Rectangle){pos.x * BS, pos.y * BS, BS, BS}, 0.1f, 16, clr);
 
-
-
-
-
-
-
-
-
-
-
-
-#define SAMPLE_RATE 44100
-#define AMPLITUDE 32000
-#define SDUR 0.5f
-
-typedef struct {
-	float frequency;
-	float duration; // in seconds
-} Note;
-
-// Tetris Theme (Korobeiniki) melody
-Note tetrisMelody[] = {
-	{ 659.25, SDUR }, { 493.88, SDUR }, { 523.25, SDUR }, { 587.33, SDUR },   // G5, D5, C5, D5
-	{ 523.25, SDUR }, { 493.88, SDUR }, { 440.00, SDUR }, { 440.00, SDUR },   // C5, D5, A4, A4
-	{ 523.25, SDUR }, { 659.25, SDUR }, { 587.33, SDUR }, { 523.25, SDUR },   // C5, G5, D5, C5
-	{ 493.88, SDUR }, { 523.25, SDUR }, { 587.33, SDUR }, { 659.25, SDUR },   // D5, C5, D5, G5
-	{ 523.25, SDUR }, { 440.00, SDUR }, { 440.00, SDUR }, {   0.00, SDUR },   // C5, A4, A4, Pause
-	{ 587.33, SDUR }, { 698.46, SDUR }, { 880.00, SDUR }, { 783.99, SDUR },   // D5, F5, A5, G5
-	{ 698.46, SDUR }, { 659.25, SDUR }, { 523.25, SDUR }, { 659.25, SDUR },   // F5, G5, C5, G5
-	{ 587.33, SDUR }, { 523.25, SDUR }, { 493.88, SDUR }, { 523.25, SDUR },   // D5, C5, D5, C5
-	{ 587.33, SDUR }, { 659.25, SDUR }, { 523.25, SDUR }, { 440.00, SDUR }	// D5, G5, C5, A4
-};
-
-#define MELODY_LENGTH (sizeof(tetrisMelody) / sizeof(Note))
-
-// Generate a sine wave for a given note
-Wave GenerateNoteWave(float frequency, float duration) {
-	int sampleCount = (int)(SAMPLE_RATE * duration);
-	short *samples = (short *)malloc(sampleCount * sizeof(short));
-
-	for (int i = 0; i < sampleCount; i++) {
-		float t = (float)i / SAMPLE_RATE;
-		samples[i] = (short)(AMPLITUDE * sinf(2.0f * PI * frequency * t));
-	}
-
-	Wave wave = { .frameCount = sampleCount, .sampleRate = SAMPLE_RATE, .sampleSize = 16, .channels = 1, .data = samples };
-	return wave;
+	int half = BS / 2;
+	Color innerClr = (Color){ clr.r >= 100 ? clr.r - 100 : clr.r,
+		clr.g >= 100 ? clr.g - 100 : clr.g,
+		clr.b >= 100 ? clr.b - 100 : clr.b,
+		clr.a };
+	DrawRectangleRounded((Rectangle){(pos.x * BS) + (int)(half / 2), (pos.y * BS) + (int)(half / 2), half, half}, 0.1f, 8, innerClr);
+	DrawRectangleLinesEx((Rectangle){pos.x * BS, pos.y * BS, BS, BS}, 1.8, outline);
 }
 
-void *PlayMelodyThread(void *arg) {
-	Note *melody = (Note *)arg;
-	while (1) {  // Infinite loop to keep repeating the melody
-		for (int i = 0; i < MELODY_LENGTH; i++) {
-			if (melody[i].frequency > 0.0) {
-				Wave wave = GenerateNoteWave(melody[i].frequency, melody[i].duration);
-				Sound sound = LoadSoundFromWave(wave);
-				PlaySound(sound);
-				usleep((int)(melody[i].duration * 500000)); // Delay for note duration
-				UnloadSound(sound);
-				free(wave.data);
-			} else {
-				usleep((int)(melody[i].duration * 1000000)); // Pause for silence
-			}
-		}
-	}
-	return NULL;
-}
-
-
-
-
-// Play the sound when a block is falling
-void block_down_audio(void) {
-	// Example melody for block down: quick and short notes
-	Note blockDown[] = {
-		{ 220.00, 0.2f }, { 220.00, 0.2f }, { 220.00, 0.2f }  // C4 (quick), repetitive
-	};
-	int length = sizeof(blockDown) / sizeof(Note);
-
-	for (int i = 0; i < length; i++) {
-		if (blockDown[i].frequency > 0.0) {
-			Wave wave = GenerateNoteWave(blockDown[i].frequency, blockDown[i].duration);
-			Sound sound = LoadSoundFromWave(wave);
-			PlaySound(sound);
-			// usleep((int)(blockDown[i].duration * 500000)); // Delay for note duration
-			UnloadSound(sound);
-			free(wave.data);
-		} else {
-			// usleep((int)(blockDown[i].duration * 1000000)); // Pause for silence
-		}
-	}
-}
-
-// Play the sound when a row is full
-void row_full_audio(void) {
-	// Example melody for row full: slightly longer note sequence
-	Note rowFull[] = {
-		{ 440.00, 0.4f }, { 523.25, 0.4f }, { 440.00, 0.4f }  // A4, C5, A4
-	};
-	int length = sizeof(rowFull) / sizeof(Note);
-
-	for (int i = 0; i < length; i++) {
-		if (rowFull[i].frequency > 0.0) {
-			Wave wave = GenerateNoteWave(rowFull[i].frequency, rowFull[i].duration);
-			Sound sound = LoadSoundFromWave(wave);
-			PlaySound(sound);
-			usleep((int)(rowFull[i].duration * 500000)); // Delay for note duration
-			UnloadSound(sound);
-			free(wave.data);
-		} else {
-			usleep((int)(rowFull[i].duration * 1000000)); // Pause for silence
-		}
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void calc_center(int *px, int *py){
-	for(int x = 0; x < COLS; x++){
-		for(int y = 0; y < ROWS; y++){
-			if(table[y][x].movement){
-				*px = *px + x;
-				*py = *py + y;
-			}
-		}
-	}
-	*px = *px / N;
-	*py = *py / N;
-}
-
-
-
+/*
 void drawRect(Vector2 pos, Color clr, Color outline){
 
 	DrawRectangle(pos.x * BS, pos.y * BS, BS, BS, clr);
@@ -202,6 +79,7 @@ void drawRect(Vector2 pos, Color clr, Color outline){
 
 	DrawRectangleLines((pos.x * BS) + 1, (pos.y * BS) + 1, BS - 1, BS - 1, outline);
 }
+*/
 
 
 void draw_table(){
@@ -222,42 +100,7 @@ void draw_table(){
 }
 
 
-
-
-// void rotate(int matrix[N][N]) {
-// 	// Rotate the matrix 90 degrees clockwise in place
-// 	for (int i = 0; i < N / 2; i++) {
-// 		for (int j = i; j < N - i - 1; j++) {
-// 			// Save the current element
-// 			int temp = matrix[i][j];
-// 
-// 			// Move values from right to top
-// 			matrix[i][j] = matrix[N - j - 1][i];
-// 
-// 			// Move values from bottom to right
-// 			matrix[N - j - 1][i] = matrix[N - i - 1][N - j - 1];
-// 
-// 			// Move values from left to bottom
-// 			matrix[N - i - 1][N - j - 1] = matrix[j][N - i - 1];
-// 
-// 			// Move saved top value to left
-// 			matrix[j][N - i - 1] = temp;
-// 		}
-// 	}
-// }
-
-
-
-
-void rotate_matrix(int cx, int cy, int size){
-	int px = 0;
-	int py = 0;
-	calc_center(&px, &py);
-}
-
-
 int move_down(){
-
 	int reached_down = 0;
 
 	for(int x = 0; x < COLS; x++){
@@ -306,17 +149,11 @@ int any_row_set(int y_set){
 	return 0;
 }
 
+
+
 int movement_y_fill(int y_set){
 	int m = 0;
 	block_t moving[N] = { 0 };
-	// for(int x = 0; x < COLS; x++){
-	// 	for(int y = 0; y < ROWS; y++){
-	// 		if(table[y][x].set && y == y_set){
-	// 			return 1;
-	// 		}
-	// 	}
-	// }
-
 	for(int x = 0; x < COLS; x++){
 		for(int y = 0; y < ROWS; y++){
 			if(table[y][x].movement){
@@ -327,19 +164,9 @@ int movement_y_fill(int y_set){
 
 	for(int x = 0; x < COLS; x++){
 		for(int y = 0; y < ROWS; y++){
-
 			if(table[y][x].set && y == y_set){
 				return 1;
-				// for(int i = 0; i < N; i++){
-				// 	if(moving[i].x == x && moving[i].y == y_set){
-				// 		return 1;
-				// 	}
-				// }
 			}
-
-			// if(table[y][x].set && y == y_set){
-			// 	return 1;
-			// }
 		}
 	}
 	return 0;
@@ -377,97 +204,11 @@ void reflect_down() {
 	}
 }
 
-void reflect_down2(){
-
-	// int dist = 0;
-	// for(int x = COLS - 1; x >= 0; x--){
-	// 	for(int y = ROWS - 1; y >= 0; y--){
-	// 		if(table[y][x].movement){
-	// 			for(int i = 0; i < ROWS; i++){
-	// 				int v = i + y;
-	// 				// int at_max = v == ROWS - (shape_idx == 6 ? 2 : 1);
-	// 				v = v + (shape_idx == 6 ? 1 : 0);
-	// 				int at_max = v == ROWS - 1;
-	// 				// if(at_max || table[v + 1][x].set){
-	// 				if(at_max || movement_y_fill(v + 1)){
-	// 					dist = i;
-	// 					goto loop_out;
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	int distA = 0;
-	int distB = 0;
-
-	int dist = 0;
-
-	for(int x = COLS - 1; x >= 0; x--){
-		for(int y = ROWS - 1; y >= 0; y--){
-			if(table[y][x].movement){
-				for(int i = 0; i < ROWS; i++){
-					int v = i + y;
-					v = v + (shape_idx == 6 ? 1 : 0);
-					int at_max = v == ROWS - 1;
-					if(at_max || table[v + 1][x].set){
-						distA = i;
-						goto first_loop_out;
-					}
-				}
-			}
-		}
-	}
-first_loop_out:
-
-
-	for(int x = 0; x < COLS; x++){
-		for(int y = 0; y < ROWS; y++){
-			if(table[y][x].movement){
-				for(int i = 0; i < ROWS; i++){
-					int v = i + y;
-					v = v + (shape_idx == 6 ? 1 : 0);
-					int at_max = v == ROWS - 1;
-					if(at_max || table[v + 1][x].set){
-						distB = i;
-						goto second_loop_out;
-					}
-				}
-			}
-		}
-	}
-second_loop_out:
-
-
-	// dist = distB + 1;
-	dist = distA;
-
-	// if(distB > distA){
-	// 	dist = distB;
-	// } else {
-	// 	dist = distA;
-	// }
-	// dist = distB;
-	// printf("%d\n", dist);
-
-	for(int x = 0; x < COLS; x++){
-		for(int y = 0; y < ROWS; y++){
-			if(table[y][x].movement){
-				table[y + dist][x].reflect = 1;
-			}
-		}
-	}
-
-}
-
-
-
 
 void import_shape(){
 	shape_idx = next_shape_idx;
 	next_shape_idx = randint(0, MAX_SHAPES - 1);
 	Color clr = shape_clr[shape_idx];
-	// printf("#%X%X%X\n", clr.r, clr.g, clr.b);
 
 	int bp = (COLS / 2) - 1;
 
@@ -576,58 +317,12 @@ void check_rows(void) {
 	}
 }
 
-int check_rows2(void){
-	int removed = 0;
-	int move_down = 0;
-	for(int y = 0; y < ROWS; y++){
-		if(check_fill_row(y)){
-			for(int i = 0; i < COLS; i++){
-				table[y][i] = (block_t){ 0 };
-				move_down = 1;
-				removed = y;
-				goto after_part;
-			}
-		}
-	}
-
-after_part:
-
-	if(move_down){
-		printf("%d\n", removed);
-		for(int x = 0; x < COLS; x++){
-			for(int y = removed; y >= 0; y--){
-				table[y + 1][x] = table[y][x];
-			}
-		}
-	}
-
-
-	// for(int x = removed; x < COLS; x++){
-	// }
-
-	return move_down;
-}
-
-
 
 void game_over_func(){
-	// int game_over = any_col_full();
-	// if(game_over){
-	// printf("Game Over!\n");
-	// clear_stack();
-	// ClearBackground(BLACK);
-	// drawText(V2((int)(WIDTH / 2) - (strlen("Game Over") * (int)(GetFontDefault().baseSize)), (int)(HEIGHT / 2) - (int)(GetFontDefault().baseSize / 2)), 12, WHITE, "GAME OVER!");
-		// exit(0);
 	running = 0;
-	// int reload = 0;
-	// while(reload == 0){
-	// 	if(IsKeyPressed(KEY_R)){
-	// 		reload = 1;
-	// 	}
-	// 	// usleep(100);
-	// 	WaitTime(1);
-	// }
 }
+
+
 
 int callback(){
 	// block_down_audio();
@@ -826,6 +521,11 @@ void play_again(void){
 }
 
 int main(void){
+
+#ifdef PLATFORM_WEB
+	disable_scroll_keys();
+#endif
+
 	SetTraceLogLevel(LOG_NONE);
 	InitWindow(WIDTH, HEIGHT, "Tetris");
 	SetTargetFPS(FPS);
@@ -862,16 +562,19 @@ int main(void){
 			sprintf(score, "%d", nlines);
 			int len = strlen(buffer);
 			DrawText(score, 10, 10, 50, WHITE);
-			drawText(V2((int)(WIDTH / 2) - (int)((len * (int)(GetFontDefault().baseSize)) / 2), (int)(HEIGHT / 2) - (int)(GetFontDefault().baseSize / 2)), 20, WHITE, buffer);
+			drawText(V2((int)(WIDTH / 2) - (int)((len * (int)(GetFontDefault().baseSize)) / 2), (int)(HEIGHT / 2) - (int)(GetFontDefault().baseSize / 2)),
+				20, WHITE, buffer);
 			drawButton("Play Again?", V2(125, 350), V2(140, 50), 20, play_again);
 
 			if(IsKeyPressed(KEY_R) || IsKeyPressed(KEY_Y)){
 				play_again();
 			}
 
+#if defined(DEKSTOP_PLATFORM)
 			if(IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_N)){
 				goto out_of_frame;
 			}
+#endif
 
 			EndDrawing();
 
@@ -898,13 +601,6 @@ int main(void){
 
 		EndDrawing();
 
-		// if(running)
-
-
-		// PollInputEvents();
-
-		// Exit
-
 
 		int Q_PRESSED = 0;
 		int RIGHT_PRESSED = 0;
@@ -913,31 +609,36 @@ int main(void){
 		int DOWN_PRESSED = 0;
 		int SPACE_PRESSED = 0;
 
-
-
-#ifdef DEKSTOP_PLATFORM
+#if defined (DEKSTOP_PLATFORM)
 		Q_PRESSED = IsKeyPressed(KEY_Q);
 		RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
 		LEFT_PRESSED = IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT);
 		UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
 		DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
 		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
-#endif
-#ifdef ANDROID_PLATFORM
+#elif defined (ANDROID_PLATFORM)
 		// Q_PRESSED = IsKeyPressed(KEY_Q);
 		RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
 		LEFT_PRESSED = IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT);
 		UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
 		DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
 		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
-#endif
-#ifdef WEB_PLATFORM
-		// Q_PRESSED = IsKeyDown(KEY_Q);
-		RIGHT_PRESSED = IsKeyDown(KEY_RIGHT);
-		LEFT_PRESSED = IsKeyDown(KEY_LEFT);
-		UP_PRESSED = IsKeyDown(KEY_UP);
-		DOWN_PRESSED = IsKeyDown(KEY_DOWN);
-		SPACE_PRESSED = IsKeyDown(KEY_SPACE);
+#elif defined (WEB_PLATFORM)
+		// // Q_PRESSED = IsKeyDown(KEY_Q);
+		// RIGHT_PRESSED = IsKeyDown(KEY_RIGHT);
+		// LEFT_PRESSED = IsKeyDown(KEY_LEFT);
+		// UP_PRESSED = IsKeyDown(KEY_UP);
+		// DOWN_PRESSED = IsKeyDown(KEY_DOWN);
+		// SPACE_PRESSED = IsKeyDown(KEY_SPACE);
+
+		UpdateKeyStates();
+
+		// Q_PRESSED = IsKeyPressedEmu(KEY_Q);
+		RIGHT_PRESSED = IsKeyPressedEmu(KEY_RIGHT);
+		LEFT_PRESSED = IsKeyPressedEmu(KEY_LEFT);
+		UP_PRESSED = IsKeyPressedEmu(KEY_UP);
+		DOWN_PRESSED = IsKeyPressedEmu(KEY_DOWN);
+		SPACE_PRESSED = IsKeyPressedEmu(KEY_SPACE);
 #endif
 
 		if(Q_PRESSED){ break; }
@@ -946,7 +647,7 @@ int main(void){
 
 		if(UP_PRESSED){
 			rotate();
-			if(rr == 2){
+			if(rr == ((shape_idx == (int)Shape_O) ? 1 : 2)){
 				move_left();
 				rr = 0;
 			}

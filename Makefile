@@ -39,7 +39,8 @@ wasm:
 	-s ASYNCIFY \
 	-s FORCE_FILESYSTEM=1 \
 	-s TOTAL_MEMORY=64MB \
-	-s USE_GLFW=3
+	-s USE_GLFW=3 \
+	--shell-file shell_minimal.html
 
 
 # Http server for testing in web
