@@ -343,34 +343,13 @@ int callback(){
 }
 
 
-
-void move_right(){
-	for(int x = 0; x < COLS; x++){
-		for(int y = 0; y < ROWS; y++){
-			if(table[y][x].movement && x == COLS -1){
-				return;
-			}
-		}
-	}
-
-	for(int x = COLS - 2; x >= 0; x--){
-		for(int y = 0; y < ROWS; y++){
-			if(table[y][x].movement){
-				table[y][x].movement = 0;
-				table[y][x + 1].movement = 1;
-				table[y][x + 1].color = table[y][x].color;
-			}
-		}
-	}
-}
-
-
-
-void move_left(){
-	for(int x = 0; x < COLS; x++) {
-		for(int y = 0; y < ROWS; y++) {
-			if(table[y][x].movement && x == 0){
-				return;
+void move_left(void) {
+	for (int x = 0; x < COLS; x++) {
+		for (int y = 0; y < ROWS; y++) {
+			if (table[y][x].movement) {
+				if (x == 0 || table[y][x - 1].set) {
+					return;
+				}
 			}
 		}
 	}
@@ -378,14 +357,33 @@ void move_left(){
 	for (int x = 1; x < COLS; x++) {
 		for (int y = 0; y < ROWS; y++) {
 			if (table[y][x].movement) {
-				table[y][x].movement = 0;
-				table[y][x - 1].movement = 1;
-				table[y][x - 1].color = table[y][x].color;
+				table[y][x - 1] = table[y][x];
+				table[y][x] = (block_t){0};
 			}
 		}
 	}
 }
 
+void move_right(void) {
+	for (int x = COLS - 1; x >= 0; x--) {
+		for (int y = 0; y < ROWS; y++) {
+			if (table[y][x].movement) {
+				if (x == COLS - 1 || table[y][x + 1].set) {
+					return;
+				}
+			}
+		}
+	}
+
+	for (int x = COLS - 2; x >= 0; x--) {
+		for (int y = 0; y < ROWS; y++) {
+			if (table[y][x].movement) {
+				table[y][x + 1] = table[y][x];
+				table[y][x] = (block_t){0};
+			}
+		}
+	}
+}
 
 
 void draw_next_shape() {

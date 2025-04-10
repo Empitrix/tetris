@@ -1,57 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>My Raylib Game</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: #111;
-    }
+	<meta charset="utf-8" />
+	<title>Tetris</title>
+	<style>
+		html, body {
+			margin: 0;
+			padding: 0;
+			height: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			background-color: #111;
+		}
 
-    canvas {
-      width: 400px;  /* Set your canvas width */
-      height: 500px; /* Set your canvas height */
-      background-color: black;
-      outline: none;
-      image-rendering: pixelated;
-    }
+		canvas {
+			/* Set your canvas size */
+			width: 400px;
+			height: 500px;
+			background-color: black;
+			outline: none;
+			image-rendering: pixelated;
+		}
 
-    /* Optional loading text */
-    #loading {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-family: monospace;
-      color: #aaa;
-      font-size: 1.2em;
-    }
-  </style>
+		/* Optional loading text */
+		#loading {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			font-family: monospace;
+			color: #aaa;
+			font-size: 1.2em;
+		}
+	</style>
 </head>
 <body>
-  <div id="loading">Loading...</div>
-  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+	<div id="loading">Loading...</div>
+	<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
 
-  <script>
-    var Module = {
-      canvas: document.getElementById('canvas'),
-      preRun: [],
-      postRun: [
-        () => {
-          document.getElementById('loading').style.display = 'none';
-          Module.canvas.focus();
-        }
-      ]
-    };
-  </script>
+	<script>
+		var Module = {
+			canvas: document.getElementById('canvas'),
+			preRun: [],
+			postRun: [
+				() => {
+					document.getElementById('loading').style.display = 'none';
+					Module.canvas.focus();
+				}
+			]
+		};
+	</script>
 
-  {{{ SCRIPT }}}
+	{{{ SCRIPT }}}
 </body>
 </html>
 
