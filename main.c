@@ -546,7 +546,16 @@ int main(void){
 	import_shape();
 
 
-	while (!WindowShouldClose()){
+	int currentGesture = GESTURE_NONE;
+	int lastGesture = GESTURE_NONE;
+
+	Vector2 touchPosition = { 0, 0 };
+	// Rectangle touchArea = { 220, 10, screenWidth - 230.0f, screenHeight - 20.0f };
+	Rectangle touchArea = { 0, 0, WIDTH, HEIGHT };
+
+
+
+	while(!WindowShouldClose()){
 
 
 		if(running == 0 && !WindowShouldClose()){
@@ -607,6 +616,9 @@ int main(void){
 		int DOWN_PRESSED = 0;
 		int SPACE_PRESSED = 0;
 
+	int hit_status = 0;
+	int cntr = 0;
+
 #if defined (DEKSTOP_PLATFORM)
 		Q_PRESSED = IsKeyPressed(KEY_Q);
 		RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
@@ -621,6 +633,55 @@ int main(void){
 		UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
 		DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
 		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
+
+
+		lastGesture = currentGesture;
+		currentGesture = GetGestureDetected();
+		touchPosition = GetTouchPosition(0);
+
+		if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
+			if(currentGesture != lastGesture){
+				// Store gesture string
+				switch(currentGesture){
+					case GESTURE_TAP:
+						rotate();
+						if(rr == ((shape_idx == (int)Shape_O) ? 1 : 2)){
+							move_left();
+							rr = 0;
+						}
+						fps_cntr = 0;
+						break;
+					// case GESTURE_DOUBLETAP:  break;
+					case GESTURE_HOLD:
+						callback();
+						fps_cntr = 0;
+						break;
+					// case GESTURE_DRAG:  break;
+					case GESTURE_SWIPE_RIGHT:
+						move_right();
+						break;
+					case GESTURE_SWIPE_LEFT:
+						move_left();
+						break;
+					// case GESTURE_SWIPE_UP:  break;
+					case GESTURE_SWIPE_DOWN:
+						while(hit_status == 0){
+							if(cntr++ >= (COLS + (N * N))){
+								game_over_func();
+								hit_status = 0;
+								break;
+							}
+							hit_status = callback();
+						}
+						break;
+					// case GESTURE_PINCH_IN:  break;
+					// case GESTURE_PINCH_OUT:  break;
+					default: break;
+				}
+			}
+		}
+
+
 #elif defined (WEB_PLATFORM)
 		// // Q_PRESSED = IsKeyDown(KEY_Q);
 		// RIGHT_PRESSED = IsKeyDown(KEY_RIGHT);
@@ -658,8 +719,8 @@ int main(void){
 		}
 
 		if(SPACE_PRESSED){
-			int hit_status = 0;
-			int cntr = 0;
+			hit_status = 0;
+			cntr = 0;
 			while(hit_status == 0){
 				if(cntr++ >= (COLS + (N * N))){
 					game_over_func();
