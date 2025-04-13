@@ -9,13 +9,14 @@
 #include <pthread.h>
 
 
-
+// #define PLATFORM_ANDROID
+#define SEGMENTS 12
 
 
 // No valid platform defined!, Using default!
-#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID) && !defined(PLATFORM_DESKTOP)
-#ifndef DEKSTOP_PLATFORM
-#define DEKSTOP_PLATFORM
+#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID) && !defined(PLATFORM_DEKSTOP)
+#ifndef PLATFORM_DEKSTOP
+#define PLATFORM_DEKSTOP
 #endif
 #endif
 
@@ -524,6 +525,10 @@ int main(void){
 	disable_scroll_keys();
 #endif
 
+#if defined (PLATFORM_ANDROID)
+	SetGesturesEnabled(GESTURE_DRAG | GESTURE_HOLD | GESTURE_SWIPE_DOWN | GESTURE_DOUBLETAP);
+#endif
+
 	SetTraceLogLevel(LOG_NONE);
 	InitWindow(WIDTH, HEIGHT, "Tetris");
 	SetTargetFPS(FPS);
@@ -552,6 +557,7 @@ int main(void){
 	Vector2 touchPosition = { 0, 0 };
 	// Rectangle touchArea = { 220, 10, screenWidth - 230.0f, screenHeight - 20.0f };
 	Rectangle touchArea = { 0, 0, WIDTH, HEIGHT };
+	int currentSegment = 0;
 
 
 
@@ -616,17 +622,17 @@ int main(void){
 		int DOWN_PRESSED = 0;
 		int SPACE_PRESSED = 0;
 
-	int hit_status = 0;
-	int cntr = 0;
+		int hit_status = 0;
+		int cntr = 0;
 
-#if defined (DEKSTOP_PLATFORM)
+#if defined (PLATFORM_DEKSTOP)
 		Q_PRESSED = IsKeyPressed(KEY_Q);
 		RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
 		LEFT_PRESSED = IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT);
 		UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
 		DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
 		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
-#elif defined (ANDROID_PLATFORM)
+#elif defined (PLATFORM_ANDROID)
 		// Q_PRESSED = IsKeyPressed(KEY_Q);
 		RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
 		LEFT_PRESSED = IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT);
@@ -635,54 +641,110 @@ int main(void){
 		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
 
 
+		// lastGesture = currentGesture;
+		// currentGesture = GetGestureDetected();
+		// touchPosition = GetTouchPosition(0);
+
+		// if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
+		// 	if(currentGesture != lastGesture){
+		// 		// Store gesture string
+		// 		switch(currentGesture){
+		// 			case GESTURE_TAP:
+		// 				rotate();
+		// 				if(rr == ((shape_idx == (int)Shape_O) ? 1 : 2)){
+		// 					move_left();
+		// 					rr = 0;
+		// 				}
+		// 				fps_cntr = 0;
+		// 				break;
+		// 			// case GESTURE_DOUBLETAP:  break;
+		// 			case GESTURE_HOLD:
+		// 				callback();
+		// 				fps_cntr = 0;
+		// 				break;
+		// 			// case GESTURE_DRAG:  break;
+		// 			case GESTURE_SWIPE_RIGHT:
+		// 				move_right();
+		// 				break;
+		// 			case GESTURE_SWIPE_LEFT:
+		// 				move_left();
+		// 				break;
+		// 			// case GESTURE_SWIPE_UP:  break;
+		// 			case GESTURE_SWIPE_DOWN:
+		// 				while(hit_status == 0){
+		// 					if(cntr++ >= (COLS + (N * N))){
+		// 						game_over_func();
+		// 						hit_status = 0;
+		// 						break;
+		// 					}
+		// 					hit_status = callback();
+		// 				}
+		// 				break;
+		// 			// case GESTURE_PINCH_IN:  break;
+		// 			// case GESTURE_PINCH_OUT:  break;
+		// 			default: break;
+		// 		}
+		// 	}
+		// }
+
+
 		lastGesture = currentGesture;
 		currentGesture = GetGestureDetected();
 		touchPosition = GetTouchPosition(0);
 
+
 		if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
-			if(currentGesture != lastGesture){
-				// Store gesture string
-				switch(currentGesture){
-					case GESTURE_TAP:
-						rotate();
-						if(rr == ((shape_idx == (int)Shape_O) ? 1 : 2)){
-							move_left();
-							rr = 0;
-						}
-						fps_cntr = 0;
-						break;
-					// case GESTURE_DOUBLETAP:  break;
-					case GESTURE_HOLD:
-						callback();
-						fps_cntr = 0;
-						break;
-					// case GESTURE_DRAG:  break;
-					case GESTURE_SWIPE_RIGHT:
-						move_right();
-						break;
-					case GESTURE_SWIPE_LEFT:
-						move_left();
-						break;
-					// case GESTURE_SWIPE_UP:  break;
-					case GESTURE_SWIPE_DOWN:
-						while(hit_status == 0){
-							if(cntr++ >= (COLS + (N * N))){
-								game_over_func();
-								hit_status = 0;
+
+			if (IsGestureDetected(GESTURE_DRAG)) {
+
+				int newSegment = (int)(touchPosition.x / (int)(WIDTH / SEGMENTS));
+				if(newSegment > currentSegment){
+					// TraceLog(LOG_INFO, "move right from %d to %d", currentSegment + 1, newSegment + 1);
+					currentSegment = newSegment;
+					move_right();
+				} else if (newSegment < currentSegment){
+					// TraceLog(LOG_INFO, "move left from %d to %d", currentSegment + 1, newSegment + 1);
+					currentSegment = newSegment;
+					move_left();
+				}
+			} else {
+				if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
+					if(currentGesture != lastGesture){
+						switch(currentGesture){
+							case GESTURE_DOUBLETAP:
+								rotate();
+								if(rr == ((shape_idx == (int)Shape_O) ? 1 : 2)){
+									move_left();
+									rr = 0;
+								}
+								fps_cntr = 0;
 								break;
-							}
-							hit_status = callback();
+							case GESTURE_HOLD:
+								callback();
+								fps_cntr = 0;
+								break;
+							case GESTURE_SWIPE_DOWN:
+								while(hit_status == 0){
+									if(cntr++ >= (COLS + (N * N))){
+										game_over_func();
+										hit_status = 0;
+										break;
+									}
+									hit_status = callback();
+								}
+								break;
+							default: break;
 						}
-						break;
-					// case GESTURE_PINCH_IN:  break;
-					// case GESTURE_PINCH_OUT:  break;
-					default: break;
+					}
 				}
 			}
 		}
 
+		if (!IsGestureDetected(GESTURE_DRAG)) {
+			currentSegment = 0; // Reset when drag ends
+		}
 
-#elif defined (WEB_PLATFORM)
+#elif defined (PLATFORM_WEB)
 		// // Q_PRESSED = IsKeyDown(KEY_Q);
 		// RIGHT_PRESSED = IsKeyDown(KEY_RIGHT);
 		// LEFT_PRESSED = IsKeyDown(KEY_LEFT);

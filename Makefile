@@ -8,11 +8,11 @@ endif
 
 # compile for linux
 linux:
-	@ cc ./main.c -lm -lraylib -DDEKSTOP_PLATFORM -o $(OUTPUT)
+	@ cc ./main.c -lm -lraylib -DPLATFORM_DEKSTOP -o $(OUTPUT)
 
 # compile for windows
 windows:
-	@ gcc main.c -o $(OUTPUT).exe -DDEKSTOP_PLATFORM -O1 -Wall -std=c99 -Wno-missing-braces -I support/win32/include/ -L support/win32/lib/ -lraylib -lopengl32 -lm -lgdi32 -lwinmm
+	@ gcc main.c -o $(OUTPUT).exe -DPLATFORM_DEKSTOP -O1 -Wall -std=c99 -Wno-missing-braces -I support/win32/include/ -L support/win32/lib/ -lraylib -lopengl32 -lm -lgdi32 -lwinmm
 
 # Run by the specified platform
 run:
