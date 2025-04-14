@@ -632,60 +632,24 @@ int main(void){
 		UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
 		DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
 		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
-#elif defined (PLATFORM_ANDROID)
-		// Q_PRESSED = IsKeyPressed(KEY_Q);
-		RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
-		LEFT_PRESSED = IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT);
-		UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
-		DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
-		SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
+#elif defined (PLATFORM_ANDROID) || defined (PLATFORM_WEB)
+		// // Q_PRESSED = IsKeyPressed(KEY_Q);
+		// RIGHT_PRESSED = IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT);
+		// LEFT_PRESSED = IsKeyPressed(KEY_LEFT)  || IsKeyPressedRepeat(KEY_LEFT);
+		// UP_PRESSED = IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP);
+		// DOWN_PRESSED = IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN);
+		// SPACE_PRESSED = IsKeyPressed(KEY_SPACE);
 
+#ifdef PLATFORM_WEB
+		UpdateKeyStates();
+#endif
 
-		// lastGesture = currentGesture;
-		// currentGesture = GetGestureDetected();
-		// touchPosition = GetTouchPosition(0);
-
-		// if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
-		// 	if(currentGesture != lastGesture){
-		// 		// Store gesture string
-		// 		switch(currentGesture){
-		// 			case GESTURE_TAP:
-		// 				rotate();
-		// 				if(rr == ((shape_idx == (int)Shape_O) ? 1 : 2)){
-		// 					move_left();
-		// 					rr = 0;
-		// 				}
-		// 				fps_cntr = 0;
-		// 				break;
-		// 			// case GESTURE_DOUBLETAP:  break;
-		// 			case GESTURE_HOLD:
-		// 				callback();
-		// 				fps_cntr = 0;
-		// 				break;
-		// 			// case GESTURE_DRAG:  break;
-		// 			case GESTURE_SWIPE_RIGHT:
-		// 				move_right();
-		// 				break;
-		// 			case GESTURE_SWIPE_LEFT:
-		// 				move_left();
-		// 				break;
-		// 			// case GESTURE_SWIPE_UP:  break;
-		// 			case GESTURE_SWIPE_DOWN:
-		// 				while(hit_status == 0){
-		// 					if(cntr++ >= (COLS + (N * N))){
-		// 						game_over_func();
-		// 						hit_status = 0;
-		// 						break;
-		// 					}
-		// 					hit_status = callback();
-		// 				}
-		// 				break;
-		// 			// case GESTURE_PINCH_IN:  break;
-		// 			// case GESTURE_PINCH_OUT:  break;
-		// 			default: break;
-		// 		}
-		// 	}
-		// }
+		// Q_PRESSED = IsKeyPressedEmu(KEY_Q);
+		RIGHT_PRESSED = IsKeyPressedEmu(KEY_RIGHT);
+		LEFT_PRESSED = IsKeyPressedEmu(KEY_LEFT);
+		UP_PRESSED = IsKeyPressedEmu(KEY_UP);
+		DOWN_PRESSED = IsKeyPressedEmu(KEY_DOWN);
+		SPACE_PRESSED = IsKeyPressedEmu(KEY_SPACE);
 
 
 		lastGesture = currentGesture;
@@ -744,22 +708,22 @@ int main(void){
 			currentSegment = 0; // Reset when drag ends
 		}
 
-#elif defined (PLATFORM_WEB)
-		// // Q_PRESSED = IsKeyDown(KEY_Q);
-		// RIGHT_PRESSED = IsKeyDown(KEY_RIGHT);
-		// LEFT_PRESSED = IsKeyDown(KEY_LEFT);
-		// UP_PRESSED = IsKeyDown(KEY_UP);
-		// DOWN_PRESSED = IsKeyDown(KEY_DOWN);
-		// SPACE_PRESSED = IsKeyDown(KEY_SPACE);
-
-		UpdateKeyStates();
-
-		// Q_PRESSED = IsKeyPressedEmu(KEY_Q);
-		RIGHT_PRESSED = IsKeyPressedEmu(KEY_RIGHT);
-		LEFT_PRESSED = IsKeyPressedEmu(KEY_LEFT);
-		UP_PRESSED = IsKeyPressedEmu(KEY_UP);
-		DOWN_PRESSED = IsKeyPressedEmu(KEY_DOWN);
-		SPACE_PRESSED = IsKeyPressedEmu(KEY_SPACE);
+// #elif defined (PLATFORM_WEB)
+// 		// // Q_PRESSED = IsKeyDown(KEY_Q);
+// 		// RIGHT_PRESSED = IsKeyDown(KEY_RIGHT);
+// 		// LEFT_PRESSED = IsKeyDown(KEY_LEFT);
+// 		// UP_PRESSED = IsKeyDown(KEY_UP);
+// 		// DOWN_PRESSED = IsKeyDown(KEY_DOWN);
+// 		// SPACE_PRESSED = IsKeyDown(KEY_SPACE);
+// 
+// 		UpdateKeyStates();
+// 
+// 		// Q_PRESSED = IsKeyPressedEmu(KEY_Q);
+// 		RIGHT_PRESSED = IsKeyPressedEmu(KEY_RIGHT);
+// 		LEFT_PRESSED = IsKeyPressedEmu(KEY_LEFT);
+// 		UP_PRESSED = IsKeyPressedEmu(KEY_UP);
+// 		DOWN_PRESSED = IsKeyPressedEmu(KEY_DOWN);
+// 		SPACE_PRESSED = IsKeyPressedEmu(KEY_SPACE);
 #endif
 
 		if(Q_PRESSED){ break; }
