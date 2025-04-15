@@ -15,15 +15,20 @@
 		}
 
 		canvas {
-			/* Set your canvas size */
-			width: 400px;
-			height: 500px;
+			width: calc(400px + 100px);
+			height: calc(600px + 100px);
 			background-color: black;
 			outline: none;
 			image-rendering: pixelated;
 		}
 
-		/* Optional loading text */
+		@media (max-width: 768px) {
+			canvas {
+				height: 100vh;
+				width: calc(100vh * 0.8); /* 0.8 is the aspect ratio (400 / 500) */
+			}
+		}
+
 		#loading {
 			position: absolute;
 			top: 50%;
@@ -55,4 +60,5 @@
 	{{{ SCRIPT }}}
 </body>
 </html>
+
 

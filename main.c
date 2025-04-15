@@ -344,6 +344,25 @@ int callback(){
 }
 
 
+void move_down_wrapper(void){
+	callback();
+	fps_cntr = 0;
+}
+
+
+void move_down_fast(void){
+	int hit_status = 0;
+	int cntr = 0;
+	while(hit_status == 0){
+		if(cntr++ >= (COLS + (N * N))){
+			game_over_func();
+			hit_status = 0;
+			break;
+		}
+		hit_status = callback();
+	}
+}
+
 void move_left(void) {
 	for (int x = 0; x < COLS; x++) {
 		for (int y = 0; y < ROWS; y++) {
@@ -530,7 +549,15 @@ int main(void){
 #endif
 
 	SetTraceLogLevel(LOG_NONE);
+
+#if defined (PLATFORM_ANDROID) || defined(PLATFORM_WEB)
+	// SetGesturesEnabled(GESTURE_DRAG | GESTURE_HOLD | GESTURE_SWIPE_DOWN | GESTURE_DOUBLETAP);
+	InitWindow(WIDTH, HEIGHT + 100, "Tetris");
+#else
 	InitWindow(WIDTH, HEIGHT, "Tetris");
+#endif
+
+
 	SetTargetFPS(FPS);
 
 	// Initialize background audio
@@ -603,7 +630,8 @@ int main(void){
 		}
 
 
-		drawText(V2(280, 50), 30, WHITE, "%d, [%d]", fps_cntr, next_shape_idx);
+		// drawText(V2(280, 50), 30, WHITE, "%d, [%d]", fps_cntr, next_shape_idx);
+		drawText(V2(265, 70), 20, WHITE, "Next Shape", fps_cntr, next_shape_idx);
 		drawText(V2(280, 250), 30, WHITE, "Lines");
 		drawText(V2(280, 300), 30, WHITE, "%d", nlines);
 
@@ -611,8 +639,6 @@ int main(void){
 		reflect_down();
 		draw_table();
 		draw_next_shape();
-
-		EndDrawing();
 
 
 		int Q_PRESSED = 0;
@@ -652,61 +678,70 @@ int main(void){
 		SPACE_PRESSED = IsKeyPressedEmu(KEY_SPACE);
 
 
-		lastGesture = currentGesture;
-		currentGesture = GetGestureDetected();
-		touchPosition = GetTouchPosition(0);
+		drawButton("Right", V2(100, HEIGHT + 15), V2(70, 70), 20, move_right);
+		drawButton("Left", V2(20, HEIGHT + 15), V2(70, 70), 20, move_left);
+
+		drawButton("Rotate", V2(WIDTH - 110, HEIGHT - 150), V2(70, 70), 20, rotate);
+		drawButton("Down", V2(WIDTH - 110, HEIGHT - 50), V2(70, 70), 20, move_down_wrapper);
+
+		drawButtonEx("Down", V2(WIDTH - 110, HEIGHT - 50), V2(70, 70), 20, move_down_wrapper, move_down_fast);
 
 
-		if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
+		// lastGesture = currentGesture;
+		// currentGesture = GetGestureDetected();
+		// touchPosition = GetTouchPosition(0);
 
-			if (IsGestureDetected(GESTURE_DRAG)) {
 
-				int newSegment = (int)(touchPosition.x / (int)(WIDTH / SEGMENTS));
-				if(newSegment > currentSegment){
-					// TraceLog(LOG_INFO, "move right from %d to %d", currentSegment + 1, newSegment + 1);
-					currentSegment = newSegment;
-					move_right();
-				} else if (newSegment < currentSegment){
-					// TraceLog(LOG_INFO, "move left from %d to %d", currentSegment + 1, newSegment + 1);
-					currentSegment = newSegment;
-					move_left();
-				}
-			} else {
-				if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
-					if(currentGesture != lastGesture){
-						switch(currentGesture){
-							case GESTURE_DOUBLETAP:
-								rotate();
-								if(rr == ((shape_idx == (int)Shape_O) ? 1 : 2)){
-									move_left();
-									rr = 0;
-								}
-								fps_cntr = 0;
-								break;
-							case GESTURE_HOLD:
-								callback();
-								fps_cntr = 0;
-								break;
-							case GESTURE_SWIPE_DOWN:
-								while(hit_status == 0){
-									if(cntr++ >= (COLS + (N * N))){
-										game_over_func();
-										hit_status = 0;
-										break;
-									}
-									hit_status = callback();
-								}
-								break;
-							default: break;
-						}
-					}
-				}
-			}
-		}
+		// if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
 
-		if (!IsGestureDetected(GESTURE_DRAG)) {
-			currentSegment = 0; // Reset when drag ends
-		}
+		// 	if (IsGestureDetected(GESTURE_DRAG)) {
+
+		// 		int newSegment = (int)(touchPosition.x / (int)(WIDTH / SEGMENTS));
+		// 		if(newSegment > currentSegment){
+		// 			// TraceLog(LOG_INFO, "move right from %d to %d", currentSegment + 1, newSegment + 1);
+		// 			currentSegment = newSegment;
+		// 			move_right();
+		// 		} else if (newSegment < currentSegment){
+		// 			// TraceLog(LOG_INFO, "move left from %d to %d", currentSegment + 1, newSegment + 1);
+		// 			currentSegment = newSegment;
+		// 			move_left();
+		// 		}
+		// 	} else {
+		// 		if(CheckCollisionPointRec(touchPosition, touchArea) && (currentGesture != GESTURE_NONE)){
+		// 			if(currentGesture != lastGesture){
+		// 				switch(currentGesture){
+		// 					case GESTURE_DOUBLETAP:
+		// 						rotate();
+		// 						if(rr == ((shape_idx == (int)Shape_O) ? 1 : 2)){
+		// 							move_left();
+		// 							rr = 0;
+		// 						}
+		// 						fps_cntr = 0;
+		// 						break;
+		// 					case GESTURE_HOLD:
+		// 						callback();
+		// 						fps_cntr = 0;
+		// 						break;
+		// 					case GESTURE_SWIPE_DOWN:
+		// 						while(hit_status == 0){
+		// 							if(cntr++ >= (COLS + (N * N))){
+		// 								game_over_func();
+		// 								hit_status = 0;
+		// 								break;
+		// 							}
+		// 							hit_status = callback();
+		// 						}
+		// 						break;
+		// 					default: break;
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
+
+		// if (!IsGestureDetected(GESTURE_DRAG)) {
+		// 	currentSegment = 0; // Reset when drag ends
+		// }
 
 // #elif defined (PLATFORM_WEB)
 // 		// // Q_PRESSED = IsKeyDown(KEY_Q);
@@ -725,6 +760,9 @@ int main(void){
 // 		DOWN_PRESSED = IsKeyPressedEmu(KEY_DOWN);
 // 		SPACE_PRESSED = IsKeyPressedEmu(KEY_SPACE);
 #endif
+
+
+		EndDrawing();
 
 		if(Q_PRESSED){ break; }
 		if(RIGHT_PRESSED){ move_right(); }

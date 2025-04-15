@@ -166,6 +166,49 @@ void drawButton(const char *title, Vector2 position, Vector2 size, int font_size
 
 
 
+void drawButtonEx(const char *title, Vector2 position, Vector2 size, int font_size,
+				buttonCallback_t callback, buttonCallback_t doubleTapCallback) {
+	static double lastClickTime = 0;
+	const double doubleTapThreshold = 0.3; // seconds
+
+	Rectangle rbtn = { position.x, position.y, size.x, size.y };
+	int btnState = 0;
+	bool btnAction = false;
+	Vector2 mousePoint = GetMousePosition();
+
+	if (CheckCollisionPointRec(mousePoint, rbtn)) {
+		DrawRectangleRounded(rbtn, 0.4, 10, DARKBLUE);
+	} else {
+		DrawRectangleRounded(rbtn, 0.4, 10, BLUE);
+	}
+
+	float textSize = strlen(title) * font_size;
+
+	Vector2 textPos = {
+		.x = position.x + ((size.x / 2) - textSize / 4),
+		.y = position.y + ((size.y / 2) - (int)(font_size / 2))
+	};
+
+	DrawTextEx(GetFontDefault(), title, textPos, font_size, 1, WHITE);
+
+	if (CheckCollisionPointRec(mousePoint, rbtn)) {
+		btnState = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? 2 : 1;
+
+		if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+			double currentTime = GetTime();
+			if ((currentTime - lastClickTime) < doubleTapThreshold) {
+				if (doubleTapCallback != NULL) doubleTapCallback();
+			} else {
+				if (callback != NULL) callback();
+			}
+			lastClickTime = currentTime;
+		}
+	}
+}
+
+
+
+
 
 
 static char currentKeyState[MAX_KEYS] = {0};
